@@ -12,7 +12,7 @@ st.set_page_config(
     page_icon="🏀"
 )
 
-# Clean light theme styling
+# Clean light theme styling (enhanced card width for RECORD)
 st.markdown("""
     <style>
         /* Main spacing */
@@ -25,7 +25,7 @@ st.markdown("""
             color: #1a1a1a;
             font-family: 'Segoe UI', sans-serif;
         }
-        /* Stat cards */
+        /* Stat cards - wider for RECORD */
         .stMetric {
             background-color: #f8f9fa;
             border-radius: 12px;
@@ -44,8 +44,14 @@ st.markdown("""
             margin-bottom: 0.6rem;
         }
         .stMetricValue {
-            font-size: 2.4rem !important;
+            font-size: 2.2rem !important;
             font-weight: 700 !important;
+            white-space: pre-wrap; /* Allow wrapping for long records */
+            line-height: 1.2;
+        }
+        /* Make RECORD metric wider */
+        div[data-testid="stMetric"]:nth-child(2) {
+            min-width: 220px !important;
         }
         /* Chart container */
         .stPlotlyChart, .stLineChart {
@@ -78,7 +84,7 @@ except Exception as e:
     df = pd.DataFrame()
 
 # ──────────────────────────────────────────────
-# Sidebar Filters (apply to all stats/chart)
+# Sidebar Filters (apply to stats/chart)
 # ──────────────────────────────────────────────
 st.sidebar.header("Filters")
 
@@ -99,7 +105,7 @@ if markets:
     df = df[df['Market'].isin(markets)]
 
 # ──────────────────────────────────────────────
-# Top Stat Cards (with green/red coloring)
+# Top Stat Cards (with green/red coloring, wider RECORD)
 # ──────────────────────────────────────────────
 if not df.empty:
     st.subheader("Key Statistics")
@@ -129,26 +135,23 @@ if not df.empty:
     total_profit = resolved['Profit'].sum()
     roi = (total_profit / (graded_bets * 100)) * 100 if graded_bets > 0 else 0
     
-    # Display in wide columns
-    with st.container():
-        col1, col2, col3, col4, col5 = st.columns([1.2, 1.4, 1.2, 1.4, 1.2])  # wider for RECORD
-        
-        col1.metric("TOTAL BETS", f"{total_bets:,}", delta=f"{len(pending)} pending")
-        
-        record_delta = f"{voids_dnp} void/DNP"
-        record_color = "#2ecc71" if wins > losses else "#e74c3c"
-        with col2:
-            st.metric("RECORD", f"{wins}W - {losses}L", delta=record_delta, delta_color="normal")
-            st.markdown(f"<div style='color:{record_color}; font-weight:bold; text-align:center;'>{wins}W - {losses}L</div>", unsafe_allow_html=True)
-        
-        win_rate_delta = f"{52.4:.1f}% to break even"
-        col3.metric("WIN RATE", f"{win_rate:.1f}%", delta=win_rate_delta)
-        
-        pl_color = "normal" if total_profit >= 0 else "inverse"
-        col4.metric("PROFIT/LOSS", f"+${total_profit:,.0f}", delta="$100/bet", delta_color=pl_color)
-        
-        roi_color = "normal" if roi >= 0 else "inverse"
-        col5.metric("ROI", f"+{roi:.1f}%", delta="return on investment", delta_color=roi_color)
+    # Display in columns with wider RECORD
+    col1, col2, col3, col4, col5 = st.columns([1.2, 1.6, 1.2, 1.4, 1.2])  # Wider for RECORD
+    
+    col1.metric("TOTAL BETS", f"{total_bets:,}", delta=f"{len(pending)} pending")
+    
+    # Wider RECORD card
+    with col2.container():
+        st.metric("RECORD", f"{wins}W - {losses}L", delta=f"{voids_dnp} void/DNP")
+    
+    win_rate_delta = f"{52.4:.1f}% to break even"
+    col3.metric("WIN RATE", f"{win_rate:.1f}%", delta=win_rate_delta)
+    
+    pl_color = "normal" if total_profit >= 0 else "inverse"
+    col4.metric("PROFIT/LOSS", f"+${total_profit:,.0f}", delta="$100/bet", delta_color=pl_color)
+    
+    roi_color = "normal" if roi >= 0 else "inverse"
+    col5.metric("ROI", f"+{roi:.1f}%", delta="return on investment", delta_color=roi_color)
 
 # ──────────────────────────────────────────────
 # Cumulative P/L Chart
@@ -159,7 +162,7 @@ if not df.empty and 'Profit' in resolved.columns:
     resolved = resolved.sort_values('Signal Time')
     resolved['Cumulative Profit'] = resolved['Profit'].cumsum()
     
-    # Line chart with conditional coloring (green up, red down)
+    # Line chart with conditional coloring
     chart_data = resolved.set_index('Signal Time')['Cumulative Profit']
     
     st.line_chart(
@@ -171,6 +174,6 @@ if not df.empty and 'Profit' in resolved.columns:
     
     st.caption(f"Total P/L: +${total_profit:,.0f} | {len(resolved)} graded bets")
 
-# Footer note
+# Footer
 st.markdown("---")
 st.caption("Bet Baba Signals Dashboard • Updated from signals.csv • Last refresh: " + pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"))
